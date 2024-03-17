@@ -4,7 +4,11 @@ using UnityEngine.Rendering;
 
 namespace HauntedPSX.RenderPipelines.PSX.Runtime
 {
+    #if UNITY_2023_2_OR_NEWER
+    public partial class PSXRenderPipelineAsset : RenderPipelineAsset<PSXRenderPipeline>
+    #else
     public partial class PSXRenderPipelineAsset : RenderPipelineAsset
+    #endif
     {
         #if UNITY_2022_3_OR_NEWER
         // Shader stripping changed in Core RP 14.0.8 which used by Unity 2022 LTS and later
