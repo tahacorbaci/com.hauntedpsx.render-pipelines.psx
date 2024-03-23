@@ -94,6 +94,10 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             CoreUtils.Destroy(crtMaterial);
             compressionCSKernels = null;
             DisposeLighting();
+
+            #if UNITY_2023_2_OR_NEWER
+            if (VolumeManager.instance.isInitialized) VolumeManager.instance.Deinitialize();
+            #endif
         }
 
         void PushCameraParameters(Camera camera, PSXCamera psxCamera, CommandBuffer cmd, out int rasterizationWidth, out int rasterizationHeight, out Vector4 cameraAspectModeUVScaleBias, bool isPSXQualityEnabled)
