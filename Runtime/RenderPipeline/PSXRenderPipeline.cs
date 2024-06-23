@@ -27,7 +27,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
         int frameCount;
 
         public static PSXRenderPipeline instance = null;
-        
+
         internal PSXRenderPipeline(PSXRenderPipelineAsset asset)
         {
             instance = this;
@@ -38,8 +38,16 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
 
         internal protected void Build()
         {
+            ConfigureVolumeManager();
             ConfigureGlobalRenderPipelineTag();
             ConfigureSRPBatcherFromAsset(m_Asset);
+        }
+
+        static void ConfigureVolumeManager()
+        {
+            #if UNITY_2023_2_OR_NEWER
+            if (!VolumeManager.instance.isInitialized) VolumeManager.instance.Initialize();
+            #endif
         }
 
         static void ConfigureGlobalRenderPipelineTag()
@@ -86,6 +94,10 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             CoreUtils.Destroy(crtMaterial);
             compressionCSKernels = null;
             DisposeLighting();
+
+            #if UNITY_2023_2_OR_NEWER
+            if (VolumeManager.instance.isInitialized) VolumeManager.instance.Deinitialize();
+            #endif
         }
 
         void PushCameraParameters(Camera camera, PSXCamera psxCamera, CommandBuffer cmd, out int rasterizationWidth, out int rasterizationHeight, out Vector4 cameraAspectModeUVScaleBias, bool isPSXQualityEnabled)
@@ -98,7 +110,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 if (isPSXQualityEnabled && volumeSettings.isFrameLimitEnabled.value)
                 {
                     QualitySettings.vSyncCount = 0; // VSync must be disabled
-                    Application.targetFrameRate = volumeSettings.frameLimit.value;                
+                    Application.targetFrameRate = volumeSettings.frameLimit.value;
                 }
                 else
                 {
@@ -117,7 +129,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 {
                     rasterizationWidth = Mathf.Min(rasterizationWidth, volumeSettings.targetRasterizationResolutionWidth.value);
                     rasterizationHeight = Mathf.Min(rasterizationHeight, volumeSettings.targetRasterizationResolutionHeight.value);
-                    
+
                     // Only render locked aspect ratio in main game view.
                     // Force scene view to render with free aspect ratio so that users edit area is not cropped.
                     // This also works around an issue with the aspect ratio discrepancy between locked mode, and
@@ -245,7 +257,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 if (!camera.TryGetCullingParameters(camera.stereoEnabled, out cullingParameters)) { continue; }
 
                 // Need to update the volume manager for the current camera before querying any volume parameter results.
-                // This triggers the volume manager to blend volume parameters spatially, based on the camera position. 
+                // This triggers the volume manager to blend volume parameters spatially, based on the camera position.
                 VolumeManager.instance.Update(camera.transform, camera.cullingMask);
 
                 bool isPSXQualityEnabled = EvaluateIsPSXQualityEnabledFromVolume();
@@ -253,7 +265,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 // Disable PSX Quality effects if the editor post processing checkbox is disabled.
                 // This allows users to easily preview their raw geometry and textures without needing to toggle it in the volume system.
                 // This is important, since changes to the volume system will trigger changes to the volume profile on disk.
-                // We do not want to force diffs on files when users are just temporarily previewing things. 
+                // We do not want to force diffs on files when users are just temporarily previewing things.
                 isPSXQualityEnabled &= CoreUtils.ArePostProcessesEnabled(camera);
 
                 var cmd = CommandBufferPool.Get(PSXStringConstants.s_CommandBufferRenderForwardStr);
@@ -308,7 +320,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                     PushPreMainParameters(camera, cmd);
                     context.ExecuteCommandBuffer(cmd);
                     cmd.Release();
-                    
+
                     DrawMainOpaque(context, camera, ref cullingResults);
                     DrawMainTransparent(context, camera, ref cullingResults);
 
@@ -342,7 +354,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
 
                     TryDrawAccumulationMotionBlurFinalBlit(psxCamera, cmd, camera.targetTexture, copyColorRespectFlipYMaterial);
                 }
-                
+
                 context.ExecuteCommandBuffer(cmd);
                 cmd.Release();
                 context.Submit();
@@ -384,7 +396,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
 
         static bool IsMainGameView(Camera camera)
         {
-            return camera.cameraType == CameraType.Game; 
+            return camera.cameraType == CameraType.Game;
         }
 
         static Color ComputeClearColorFromVolume()
@@ -492,7 +504,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 // Note: We do not read the quality setting directly on the volume here, as we have already constructed this value previously
                 // outside of this function.
                 // The volume system is not the only parameter that effects if PSX Quality is enabled or disabled.
-                // We also have things like the post processing toggle in the scene view. 
+                // We also have things like the post processing toggle in the scene view.
 
                 cmd.SetGlobalInt(PSXShaderIDs._IsPSXQualityEnabled, isPSXQualityEnabled ? 1 : 0);
             }
@@ -656,7 +668,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 {
                     cmd.SetGlobalVector(PSXShaderIDs._PrecisionGeometry, Vector4.zero);
                 }
-                
+
                 int precisionColorIndex = Mathf.FloorToInt(volumeSettings.color.value * 7.0f + 0.5f);
                 float precisionChromaBit = volumeSettings.chroma.value;
                 Vector3 precisionColor = Vector3.zero; // Silence the compiler warnings.
@@ -721,7 +733,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 if (!volumeSettings) volumeSettings = FogVolume.@default;
 
                 Vector4 fogDistanceScaleBias = new Vector4(
-                    1.0f / (volumeSettings.distanceMax.value - volumeSettings.distanceMin.value), 
+                    1.0f / (volumeSettings.distanceMax.value - volumeSettings.distanceMin.value),
                     -volumeSettings.distanceMin.value / (volumeSettings.distanceMax.value - volumeSettings.distanceMin.value),
                     -1.0f / (volumeSettings.heightMax.value - volumeSettings.heightMin.value),
                     volumeSettings.heightMax.value / (volumeSettings.heightMax.value - volumeSettings.heightMin.value)
@@ -845,16 +857,16 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
 
                 cmd.SetGlobalVector(PSXShaderIDs._FogColorLUTWeight, new Vector2(volumeSettings.colorLUTWeight.value, volumeSettings.colorLUTWeightLayer1.value));
 
-                bool isAdditionalLayerEnabled = volumeSettings.isAdditionalLayerEnabled.value; 
+                bool isAdditionalLayerEnabled = volumeSettings.isAdditionalLayerEnabled.value;
                 cmd.SetGlobalInt(PSXShaderIDs._FogIsAdditionalLayerEnabled, isAdditionalLayerEnabled ? 1 : 0);
                 if (isAdditionalLayerEnabled)
                 {
                     int fogFalloffModeLayer1 = (int)volumeSettings.fogFalloffModeLayer1.value;
                     cmd.SetGlobalInt(PSXShaderIDs._FogFalloffModeLayer1, fogFalloffModeLayer1);
                     cmd.SetGlobalVector(PSXShaderIDs._FogColorLayer1, new Vector4(volumeSettings.colorLayer1.value.r, volumeSettings.colorLayer1.value.g, volumeSettings.colorLayer1.value.b, volumeSettings.colorLayer1.value.a));
-                    
+
                     Vector4 fogDistanceScaleBiasLayer1 = new Vector4(
-                        1.0f / (volumeSettings.distanceMaxLayer1.value - volumeSettings.distanceMinLayer1.value), 
+                        1.0f / (volumeSettings.distanceMaxLayer1.value - volumeSettings.distanceMinLayer1.value),
                         -volumeSettings.distanceMinLayer1.value / (volumeSettings.distanceMaxLayer1.value - volumeSettings.distanceMinLayer1.value),
                         -1.0f / (volumeSettings.heightMaxLayer1.value - volumeSettings.heightMinLayer1.value),
                         volumeSettings.heightMaxLayer1.value / (volumeSettings.heightMaxLayer1.value - volumeSettings.heightMinLayer1.value)
@@ -904,10 +916,10 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
 
 
                 cmd.SetGlobalVector(PSXShaderIDs._WorldSpaceCameraPos, camera.transform.position);
-                
+
                 float time = GetAnimatedMaterialsTime(camera);
                 cmd.SetGlobalVector(PSXShaderIDs._Time, new Vector4(time / 20.0f, time, time * 2.0f, time * 3.0f));
-            
+
                 Texture2D alphaClippingDitherTex = GetAlphaClippingDitherTexFromAssetAndFrame(asset, (uint)Time.frameCount);
                 cmd.SetGlobalTexture(PSXShaderIDs._AlphaClippingDitherTexture, alphaClippingDitherTex);
                 cmd.SetGlobalVector(PSXShaderIDs._AlphaClippingDitherSize, new Vector4(
@@ -931,7 +943,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 {
                     Shader.EnableKeyword(PSXShaderKeywords.s_OUTPUT_LDR);
                 }
-            }  
+            }
         }
 
         static void PushGlobalPostProcessingParameters(Camera camera, CommandBuffer cmd, PSXRenderPipelineAsset asset, RTHandle rasterizationRT, int rasterizationWidth, int rasterizationHeight, Vector4 cameraAspectModeUVScaleBias)
@@ -961,7 +973,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                     cameraAspectModeUVScaleBiasWithRTScale.z *= scale.x;
                     cameraAspectModeUVScaleBiasWithRTScale.w *= scale.y;
                 }
-                
+
                 cmd.SetGlobalInt(PSXShaderIDs._FlipY, flipY ? 1 : 0);
                 cmd.SetGlobalVector(PSXShaderIDs._CameraAspectModeUVScaleBias, cameraAspectModeUVScaleBiasWithRTScale);
                 cmd.SetGlobalVector(PSXShaderIDs._ScreenSize, new Vector4(camera.pixelWidth, camera.pixelHeight, 1.0f / (float)camera.pixelWidth, 1.0f / (float)camera.pixelHeight));
@@ -972,11 +984,11 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 Texture2D whiteNoiseTexture = GetWhiteNoise1024RGBTexFromAssetAndFrame(asset, (uint)Time.frameCount);
                 cmd.SetGlobalTexture(PSXShaderIDs._WhiteNoiseTexture, whiteNoiseTexture);
                 cmd.SetGlobalVector(PSXShaderIDs._WhiteNoiseSize, new Vector4(whiteNoiseTexture.width, whiteNoiseTexture.height, 1.0f / (float)whiteNoiseTexture.width, 1.0f / (float)whiteNoiseTexture.height));
-                
+
                 Texture2D blueNoiseTexture = GetBlueNoise16RGBTexFromAssetAndFrame(asset, (uint)Time.frameCount);
                 cmd.SetGlobalTexture(PSXShaderIDs._BlueNoiseTexture, blueNoiseTexture);
                 cmd.SetGlobalVector(PSXShaderIDs._BlueNoiseSize, new Vector4(blueNoiseTexture.width, blueNoiseTexture.height, 1.0f / (float)blueNoiseTexture.width, 1.0f / (float)blueNoiseTexture.height));
-                
+
                 float time = GetAnimatedMaterialsTime(camera);
                 cmd.SetGlobalVector(PSXShaderIDs._Time, new Vector4(time / 20.0f, time, time * 2.0f, time * 3.0f));
             }
@@ -1042,9 +1054,9 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
         int[] FindCompressionKernels(PSXRenderPipelineAsset asset)
         {
             Debug.Assert(asset.renderPipelineResources.shaders.compressionCS, "Error: CompressionCS compute shader is unassigned in render pipeline resources. Assign a valid reference to this compute shader inside of render pipeline resources in the inspector.");
-            
+
             int[] kernels = new int[PSXComputeKernels.s_COMPRESSION.Length];
-            
+
             for (int i = 0, iLen = PSXComputeKernels.s_COMPRESSION.Length; i < iLen; ++i)
             {
                 kernels[i] = asset.renderPipelineResources.shaders.compressionCS.FindKernel(PSXComputeKernels.s_COMPRESSION[i]);
@@ -1085,7 +1097,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 );
 
                 cmd.SetComputeTextureParam(asset.renderPipelineResources.shaders.compressionCS, compressionKernel, PSXShaderIDs._CompressionSource, rasterizationRT);
-            
+
                 // TODO: Fix this when the rounding doesn't work.
                 cmd.DispatchCompute(asset.renderPipelineResources.shaders.compressionCS, compressionKernel, (rasterizationRT.width + 7) / 8, (rasterizationRT.height + 7) / 8, 1);
             }
@@ -1541,7 +1553,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                     cmd.SetGlobalTexture(PSXShaderIDs._CRTGrateMaskTexture, Texture2D.whiteTexture);
                     cmd.SetGlobalVector(PSXShaderIDs._CRTGrateMaskSize, new Vector4(1.0f, 1.0f, 1.0f, 1.0f));
                 }
-                
+
 
                 cmd.SetGlobalVector(PSXShaderIDs._CRTGrateMaskScale, new Vector2(volumeSettings.grateMaskScale.value, 1.0f / volumeSettings.grateMaskScale.value));
 
@@ -1578,7 +1590,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 // 0.0 = none
                 // 1.0/8.0 = extreme
                 cmd.SetGlobalVector(PSXShaderIDs._CRTBarrelDistortion, new Vector2(volumeSettings.barrelDistortionX.value * 0.125f, volumeSettings.barrelDistortionY.value * 0.125f));
-            
+
                 cmd.SetGlobalFloat(PSXShaderIDs._CRTVignetteSquared, volumeSettings.vignette.value * volumeSettings.vignette.value);
             }
         }
@@ -1642,7 +1654,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             {
                 perObjectData = ComputePerObjectDataFromLightingVolume(camera)
             };
-            
+
             var filteringSettings = new FilteringSettings()
             {
                 renderQueueRange = range,
@@ -1666,7 +1678,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
             {
                 perObjectData = ComputePerObjectDataFromLightingVolume(camera)
             };
-            
+
             var filteringSettings = new FilteringSettings()
             {
                 renderQueueRange = range,
@@ -1716,7 +1728,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 width = target.width;
                 height = target.height;
             }
-            
+
             cmd.SetViewport(new Rect(0.0f, 0.0f, width, height));
         }
 
