@@ -1655,13 +1655,9 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 perObjectData = ComputePerObjectDataFromLightingVolume(camera)
             };
 
-            var filteringSettings = new FilteringSettings()
-            {
-                renderQueueRange = range,
-                layerMask = camera.cullingMask, // Respect the culling mask specified on the camera so that users can selectively omit specific layers from rendering to this camera.
-                renderingLayerMask = UInt32.MaxValue, // Everything
-                excludeMotionVectorObjects = false
-            };
+            // camera.cullingMask = Respect the culling mask specified on the camera so that users can selectively omit
+            // specific layers from rendering to this camera.
+            var filteringSettings = new FilteringSettings(range, camera.cullingMask);
 
             context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
         }
@@ -1679,13 +1675,9 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 perObjectData = ComputePerObjectDataFromLightingVolume(camera)
             };
 
-            var filteringSettings = new FilteringSettings()
-            {
-                renderQueueRange = range,
-                layerMask = camera.cullingMask, // Respect the culling mask specified on the camera so that users can selectively omit specific layers from rendering to this camera.
-                renderingLayerMask = UInt32.MaxValue, // Everything
-                excludeMotionVectorObjects = false
-            };
+            // camera.cullingMask = Respect the culling mask specified on the camera so that users can selectively omit
+            // specific layers from rendering to this camera.
+            var filteringSettings = new FilteringSettings(range, camera.cullingMask);
 
             context.DrawRenderers(cullingResults, ref drawingSettings, ref filteringSettings);
         }
@@ -1703,13 +1695,9 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 criteria = SortingCriteria.CommonTransparent
             };
             var drawSettings = new DrawingSettings(PSXShaderPassNames.s_SRPDefaultUnlit, sortingSettings);
-            var filterSettings = new FilteringSettings()
-            {
-                renderQueueRange = RenderQueueRange.all,
-                layerMask = camera.cullingMask, // Respect the culling mask specified on the camera so that users can selectively omit specific layers from rendering to this camera.
-                renderingLayerMask = UInt32.MaxValue, // Everything
-                excludeMotionVectorObjects = false
-            };
+            // camera.cullingMask = Respect the culling mask specified on the camera so that users can selectively omit
+            // specific layers from rendering to this camera.
+            var filterSettings = new FilteringSettings(RenderQueueRange.all, camera.cullingMask);
             context.DrawRenderers(cullingResults, ref drawSettings, ref filterSettings);
         }
 
