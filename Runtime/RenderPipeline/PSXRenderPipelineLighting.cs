@@ -360,7 +360,7 @@ namespace HauntedPSX.RenderPipelines.PSX.Runtime
                 lightData.InitNoBake(light.GetInstanceID());
                 lightsOutput[i] = lightData;
             }
-            Debug.LogWarning("Realtime GI is not supported in HPSXRP.");
+            //Debug.LogWarning("Realtime GI is not supported in HPSXRP.");
 #endif
         };
     }
